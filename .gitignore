@@ -8,3 +8,22 @@
 *.pdb
 *.user
 *.suo
+
+# Visual Studio
+/api/.vs
+.vs/
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# Archivos binarios y temporales comunes
+bin/
+obj/
+*.log
+
+# Archivos de configuración innecesarios
+*.dbmdl
+*.userosscache
+*.sln.docstates
