@@ -5,7 +5,7 @@ import { LoginApi, RegisterApi } from "../Services/Auth";
 import { toast } from "react-toastify";
 import axios from "axios";
 
-type UserCotextType = {
+type UserContextType = {
     user: UserProfile | null;
     token: string | null;
     RegisterUser: (email: string, username: string, password: string)=>void;
@@ -16,7 +16,7 @@ type UserCotextType = {
 
 type props = { children: React.ReactNode };
 
-const UserContext = createContext<UserCotextType>({} as UserCotextType);
+const UserContext = createContext<UserContextType>({} as UserContextType);
 
 export const UserProvider = ( {children}: props)=>{
 
@@ -87,7 +87,8 @@ export const UserProvider = ( {children}: props)=>{
     }
 
     const LogOut = () => {
-        localStorage.clear();
+        localStorage.removeItem("token");
+        localStorage.removeItem("user")
         setToken(null);
         setUser(null);
         navigate("/")
