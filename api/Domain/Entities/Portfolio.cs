@@ -3,13 +3,18 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 
 namespace api.Domain.Entities
 {
-    public class AppUser : IdentityUser
+    [Table("Portfolios")]
+    public class Portfolio
     {
+        public int ID { get; set; }
+        public string Name { get; set; } = string.Empty;
+
+        public string AppUserID { get; set; }
+        public AppUser AppUser { get; set; }
+
         public List<Holding> Holdings { get; set; } = new List<Holding>();
-        public List<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     }
 }

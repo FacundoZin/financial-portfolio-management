@@ -11,8 +11,10 @@ namespace api.Domain.Entities
     {
         public string AppUserID { get; set; }
         public int StockID { get; set; }
+        public int? PortfolioID { get; set; }
 
         public AppUser AppUser { get; set; }
         public Stock Stock { get; set; }
+        public Portfolio portfolio { get; set; }
     }
 }
