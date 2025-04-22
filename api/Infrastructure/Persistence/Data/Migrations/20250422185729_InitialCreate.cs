@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace api.Migrations
 {
     /// <inheritdoc />
-    public partial class portfoliomanytomany : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -177,6 +177,26 @@ namespace api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Portfolios",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    NamePortfolio = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AppUserID = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Portfolios", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_Portfolios_AspNetUsers_AppUserID",
+                        column: x => x.AppUserID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Comments",
                 columns: table => new
                 {
@@ -185,11 +205,18 @@ namespace api.Migrations
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    StockID = table.Column<int>(type: "int", nullable: true)
+                    StockID = table.Column<int>(type: "int", nullable: true),
+                    AppUserID = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Comments", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_Comments_AspNetUsers_AppUserID",
+                        column: x => x.AppUserID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Comments_Stocks_StockID",
                         column: x => x.StockID,
@@ -198,24 +225,30 @@ namespace api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Portfolios",
+                name: "Holdings",
                 columns: table => new
                 {
-                    appuserID = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    stockid = table.Column<int>(type: "int", nullable: false)
+                    AppUserID = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    StockID = table.Column<int>(type: "int", nullable: false),
+                    PortfolioID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Portfolios", x => new { x.appuserID, x.stockid });
+                    table.PrimaryKey("PK_Holdings", x => new { x.AppUserID, x.StockID });
                     table.ForeignKey(
-                        name: "FK_Portfolios_AspNetUsers_appuserID",
-                        column: x => x.appuserID,
+                        name: "FK_Holdings_AspNetUsers_AppUserID",
+                        column: x => x.AppUserID,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Portfolios_Stocks_stockid",
-                        column: x => x.stockid,
+                        name: "FK_Holdings_Portfolios_PortfolioID",
+                        column: x => x.PortfolioID,
+                        principalTable: "Portfolios",
+                        principalColumn: "ID");
+                    table.ForeignKey(
+                        name: "FK_Holdings_Stocks_StockID",
+                        column: x => x.StockID,
                         principalTable: "Stocks",
                         principalColumn: "ID",
                         onDelete: ReferentialAction.Cascade);
@@ -226,8 +259,8 @@ namespace api.Migrations
                 columns: new[] { "Id", "ConcurrencyStamp", "Name", "NormalizedName" },
                 values: new object[,]
                 {
-                    { "06a20595-8787-4878-8001-09e16d0c53ca", null, "User", "USER" },
-                    { "57887424-a029-40c0-814d-bd1a4b295c7f", null, "Admin", "ADMIN" }
+                    { "1537dbee-0f5a-42b1-abca-e39190121ee5", null, "Admin", "ADMIN" },
+                    { "75b8b3fd-c7e1-4ebe-9650-98f3017b6280", null, "User", "USER" }
                 });
 
             migrationBuilder.CreateIndex(
@@ -270,14 +303,29 @@ namespace api.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Comments_AppUserID",
+                table: "Comments",
+                column: "AppUserID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comments_StockID",
                 table: "Comments",
                 column: "StockID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Portfolios_stockid",
+                name: "IX_Holdings_PortfolioID",
+                table: "Holdings",
+                column: "PortfolioID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Holdings_StockID",
+                table: "Holdings",
+                column: "StockID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Portfolios_AppUserID",
                 table: "Portfolios",
-                column: "stockid");
+                column: "AppUserID");
         }
 
         /// <inheritdoc />
@@ -302,16 +350,19 @@ namespace api.Migrations
                 name: "Comments");
 
             migrationBuilder.DropTable(
-                name: "Portfolios");
+                name: "Holdings");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "Portfolios");
 
             migrationBuilder.DropTable(
                 name: "Stocks");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
         }
     }
 }

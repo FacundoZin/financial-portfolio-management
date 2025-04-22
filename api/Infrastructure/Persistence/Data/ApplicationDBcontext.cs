@@ -19,6 +19,7 @@ namespace api.Infrastructure.Persistence.Data
         public DbSet<Stock> Stocks { get; set; }
         public DbSet<Comment> comments { get; set; }
         public DbSet<Holding> Holdings { get; set; }
+        public DbSet<Portfolio> portfolios { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -36,6 +37,17 @@ namespace api.Infrastructure.Persistence.Data
              .HasOne(u => u.Stock)
              .WithMany(u => u.Holdings)
              .HasForeignKey(h => h.StockID);
+
+
+            builder.Entity<Portfolio>()
+             .HasOne(p => p.AppUser)
+             .WithMany(u => u.Portfolios)
+             .HasForeignKey(p => p.AppUserID);
+
+            builder.Entity<Portfolio>()
+             .HasMany(p => p.Holdings)
+             .WithOne(h => h.portfolio)
+             .HasForeignKey(h => h.PortfolioID);
 
 
             List<IdentityRole> roles = new List<IdentityRole>

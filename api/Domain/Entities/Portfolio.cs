@@ -9,8 +9,8 @@ namespace api.Domain.Entities
     [Table("Portfolios")]
     public class Portfolio
     {
-        public int ID { get; set; }
-        public string Name { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public string NamePortfolio { get; set; } = string.Empty;
 
         public string AppUserID { get; set; }
         public AppUser AppUser { get; set; }

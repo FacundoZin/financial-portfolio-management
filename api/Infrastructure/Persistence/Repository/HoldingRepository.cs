@@ -24,7 +24,6 @@ namespace api.Infrastructure.Persistence.Repository
 
         public async Task<bool> AddStockToHolding(AppUser User, Stock stock)
         {
-
             try
             {
                 Holding added_item = new Holding

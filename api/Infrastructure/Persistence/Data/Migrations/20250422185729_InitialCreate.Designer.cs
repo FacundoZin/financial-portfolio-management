@@ -12,8 +12,8 @@ using api.Infrastructure.Persistence.Data;
 namespace api.Migrations
 {
     [DbContext(typeof(ApplicationDBcontext))]
-    [Migration("20250311203532_portfoliomanytomany")]
-    partial class portfoliomanytomany
+    [Migration("20250422185729_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -54,13 +54,13 @@ namespace api.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "57887424-a029-40c0-814d-bd1a4b295c7f",
+                            Id = "1537dbee-0f5a-42b1-abca-e39190121ee5",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "06a20595-8787-4878-8001-09e16d0c53ca",
+                            Id = "75b8b3fd-c7e1-4ebe-9650-98f3017b6280",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -172,7 +172,7 @@ namespace api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("api.Models.AppUser", b =>
+            modelBuilder.Entity("api.Domain.Entities.AppUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -237,13 +237,17 @@ namespace api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("api.Models.Comment", b =>
+            modelBuilder.Entity("api.Domain.Entities.Comment", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("AppUserID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -261,27 +265,57 @@ namespace api.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("AppUserID");
+
                     b.HasIndex("StockID");
 
                     b.ToTable("Comments");
                 });
 
-            modelBuilder.Entity("api.Models.Portfolio", b =>
+            modelBuilder.Entity("api.Domain.Entities.Holding", b =>
                 {
-                    b.Property<string>("appuserID")
+                    b.Property<string>("AppUserID")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("stockid")
+                    b.Property<int>("StockID")
                         .HasColumnType("int");
 
-                    b.HasKey("appuserID", "stockid");
+                    b.Property<int?>("PortfolioID")
+                        .HasColumnType("int");
 
-                    b.HasIndex("stockid");
+                    b.HasKey("AppUserID", "StockID");
+
+                    b.HasIndex("PortfolioID");
+
+                    b.HasIndex("StockID");
+
+                    b.ToTable("Holdings");
+                });
+
+            modelBuilder.Entity("api.Domain.Entities.Portfolio", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("AppUserID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("NamePortfolio")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("AppUserID");
 
                     b.ToTable("Portfolios");
                 });
 
-            modelBuilder.Entity("api.Models.Stock", b =>
+            modelBuilder.Entity("api.Domain.Entities.Stock", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -326,7 +360,7 @@ namespace api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("api.Models.AppUser", null)
+                    b.HasOne("api.Domain.Entities.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -335,7 +369,7 @@ namespace api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("api.Models.AppUser", null)
+                    b.HasOne("api.Domain.Entities.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -350,7 +384,7 @@ namespace api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("api.Models.AppUser", null)
+                    b.HasOne("api.Domain.Entities.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -359,51 +393,83 @@ namespace api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("api.Models.AppUser", null)
+                    b.HasOne("api.Domain.Entities.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("api.Models.Comment", b =>
+            modelBuilder.Entity("api.Domain.Entities.Comment", b =>
                 {
-                    b.HasOne("api.Models.Stock", "Stock")
+                    b.HasOne("api.Domain.Entities.AppUser", "AppUser")
+                        .WithMany()
+                        .HasForeignKey("AppUserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("api.Domain.Entities.Stock", "Stock")
                         .WithMany("Comments")
                         .HasForeignKey("StockID");
+
+                    b.Navigation("AppUser");
 
                     b.Navigation("Stock");
                 });
 
-            modelBuilder.Entity("api.Models.Portfolio", b =>
+            modelBuilder.Entity("api.Domain.Entities.Holding", b =>
                 {
-                    b.HasOne("api.Models.AppUser", "appUser")
-                        .WithMany("portfolios")
-                        .HasForeignKey("appuserID")
+                    b.HasOne("api.Domain.Entities.AppUser", "AppUser")
+                        .WithMany("Holdings")
+                        .HasForeignKey("AppUserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("api.Models.Stock", "stock")
-                        .WithMany("portfolios")
-                        .HasForeignKey("stockid")
+                    b.HasOne("api.Domain.Entities.Portfolio", "portfolio")
+                        .WithMany("Holdings")
+                        .HasForeignKey("PortfolioID");
+
+                    b.HasOne("api.Domain.Entities.Stock", "Stock")
+                        .WithMany("Holdings")
+                        .HasForeignKey("StockID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("appUser");
+                    b.Navigation("AppUser");
 
-                    b.Navigation("stock");
+                    b.Navigation("Stock");
+
+                    b.Navigation("portfolio");
                 });
 
-            modelBuilder.Entity("api.Models.AppUser", b =>
+            modelBuilder.Entity("api.Domain.Entities.Portfolio", b =>
                 {
-                    b.Navigation("portfolios");
+                    b.HasOne("api.Domain.Entities.AppUser", "AppUser")
+                        .WithMany("Portfolios")
+                        .HasForeignKey("AppUserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AppUser");
                 });
 
-            modelBuilder.Entity("api.Models.Stock", b =>
+            modelBuilder.Entity("api.Domain.Entities.AppUser", b =>
+                {
+                    b.Navigation("Holdings");
+
+                    b.Navigation("Portfolios");
+                });
+
+            modelBuilder.Entity("api.Domain.Entities.Portfolio", b =>
+                {
+                    b.Navigation("Holdings");
+                });
+
+            modelBuilder.Entity("api.Domain.Entities.Stock", b =>
                 {
                     b.Navigation("Comments");
 
-                    b.Navigation("portfolios");
+                    b.Navigation("Holdings");
                 });
 #pragma warning restore 612, 618
         }
