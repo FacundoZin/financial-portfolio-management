@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using api.Application.Interfaces.Reposiories;
 using api.Domain.Entities;
 using api.Infrastructure.Persistence.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace api.Infrastructure.Persistence.Repository
 {
@@ -31,6 +32,16 @@ namespace api.Infrastructure.Persistence.Repository
             if (result > 0) return portfolio;
 
             return null;
+
+        }
+
+        public async Task<Portfolio?> GetPortfolio(string UserID, int IdPortfolio)
+        {
+            var portfolio = await _Context.portfolios.FirstOrDefaultAsync(p => p.AppUserID == UserID && p.Id == IdPortfolio);
+
+            if (portfolio == null) return null;
+
+            return portfolio;
 
         }
     }

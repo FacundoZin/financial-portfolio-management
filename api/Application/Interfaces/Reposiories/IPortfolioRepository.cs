@@ -10,6 +10,7 @@ namespace api.Application.Interfaces.Reposiories
     public interface IPortfolioRepository
     {
         Task<Portfolio?> AddPortfolioToUser(string UserID, string namePortfolio);
+        Task<Portfolio?> GetPortfolio(string UserID, int IdPortfolio);
 
     }
 }

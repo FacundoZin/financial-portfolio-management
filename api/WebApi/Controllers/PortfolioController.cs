@@ -32,5 +32,18 @@ namespace api.WebApi.Controllers
             return CreatedAtAction(nameof(GetPortfolio), new { id = result.Data.IdPortfolio }, result.Data);
         }
 
+        [HttpGet("{id:int}")]
+        [Authorize]
+        public async Task<IActionResult> GetPortfolio([FromRoute] int id)
+        {
+            var username = User.getUserName();
+
+            var result = await _PortfolioService.GetPortfolioByID(username, id);
+
+            if (!result.Exit) return StatusCode(result.Errorcode, result.Errormessage);
+
+            return Ok(result.Data);
+        }
+
     }
 }
