@@ -10,3 +10,4 @@ namespace api.Application.DTOs.Stock
         public string Symbol { get; set; } = string.Empty;
     }
 }
+

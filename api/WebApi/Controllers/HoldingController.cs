@@ -36,9 +36,9 @@ namespace api.WebApi.Controllers
             return Ok(result.Data);
         }
 
-        [HttpPut]
+        [HttpPost]
         [Authorize]
-        public async Task<IActionResult> AddStock(string symbol)
+        public async Task<IActionResult> AddStockToHolding(string symbol)
         {
             var username = User.getUserName();
             var result = await _HoldingService.AddStock(username, symbol);
@@ -50,7 +50,7 @@ namespace api.WebApi.Controllers
 
         [HttpDelete]
         [Authorize]
-        public async Task<IActionResult> DeleteStock(string symbol)
+        public async Task<IActionResult> DeleteStockFromHolding(string symbol)
         {
             var username = User.getUserName();
             var result = await _HoldingService.DeleteStock(username, symbol);

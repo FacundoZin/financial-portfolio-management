@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using api.Application.Interfaces.Services;
+using api.WebApi.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace api.WebApi.Controllers
@@ -9,7 +12,25 @@ namespace api.WebApi.Controllers
     [Route("api/portfolio")]
     public class PortfolioController : ControllerBase
     {
+        private readonly IPortfolioService _PortfolioService;
 
+        public PortfolioController(IPortfolioService portfolioService)
+        {
+            _PortfolioService = portfolioService;
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreatePortfolio(string NamePortfolio)
+        {
+            var username = User.getUserName();
+
+            var result = await _PortfolioService.CreatePortfolio(username, NamePortfolio);
+
+            if (!result.Exit) return StatusCode(result.Errorcode, result.Errormessage);
+
+            return CreatedAtAction(nameof(GetPortfolio), new { id = result.Data.IdPortfolio }, result.Data);
+        }
 
     }
 }
