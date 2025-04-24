@@ -45,5 +45,21 @@ namespace api.WebApi.Controllers
             return Ok(result.Data);
         }
 
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetAllPortfolios()
+        {
+            var username = User.getUserName();
+
+            var result = await _PortfolioService.GetALL(username);
+
+            if (!result.Exit) return StatusCode(result.Errorcode, result.Errormessage);
+
+            return Ok(result.Data);
+
+        }
+
+
+
     }
 }

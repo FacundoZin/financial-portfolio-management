@@ -35,6 +35,13 @@ namespace api.Infrastructure.Persistence.Repository
 
         }
 
+        public async Task<List<Portfolio>?> GetAllPortfolios(string UserID)
+        {
+            var portfolios = await _Context.portfolios.Where(p => p.AppUserID == UserID).ToListAsync();
+
+            return portfolios;
+        }
+
         public async Task<Portfolio?> GetPortfolio(string UserID, int IdPortfolio)
         {
             var portfolio = await _Context.portfolios.FirstOrDefaultAsync(p => p.AppUserID == UserID && p.Id == IdPortfolio);

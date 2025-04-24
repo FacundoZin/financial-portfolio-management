@@ -12,6 +12,7 @@ namespace api.Application.Interfaces.Services
     {
         Task<Result<PortfolioAddedToUser>> CreatePortfolio(string username, string namePortfolio);
         Task<Result<Portfolio>> GetPortfolioByID(string username, int id);
+        Task<Result<List<Portfolio>>> GetALL(string username);
 
     }
 }

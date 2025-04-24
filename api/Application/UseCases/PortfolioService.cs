@@ -8,6 +8,7 @@ using api.Application.Interfaces.Reposiories;
 using api.Application.Interfaces.Services;
 using api.Domain.Entities;
 using Microsoft.Identity.Client;
+using Microsoft.IdentityModel.Tokens;
 
 namespace api.Application.UseCases
 {
@@ -29,7 +30,7 @@ namespace api.Application.UseCases
 
             var user = await _AccountService.FindByname(username);
 
-            if (user == null) return Result<PortfolioAddedToUser>.Error("sorry we couldn't get the username ", 401);
+            if (user == null) return Result<PortfolioAddedToUser>.Error("sorry we couldn't get the username ", 404);
 
             var created_portfolio = await _PortfolioRepo.AddPortfolioToUser(username, namePortfolio);
 
@@ -44,11 +45,22 @@ namespace api.Application.UseCases
             return Result<PortfolioAddedToUser>.Exito(createdPortfolio);
         }
 
+        public async Task<Result<List<Portfolio>>> GetALL(string username)
+        {
+            var User = await _AccountService.FindByname(username);
+
+            if (User == null) return Result<List<Portfolio>>.Error("sorry we couldn't get the username ", 404);
+
+            var Portfolios = await _PortfolioRepo.GetAllPortfolios(User.Id);
+
+            return Result<List<Portfolio>>.Exito(Portfolios);
+        }
+
         public async Task<Result<Portfolio>> GetPortfolioByID(string username, int id)
         {
             var user = await _AccountService.FindByname(username);
 
-            if (user == null) return Result<Portfolio>.Error("sorry we couldn't get the username ", 401);
+            if (user == null) return Result<Portfolio>.Error("sorry we couldn't get the username ", 404);
 
             var portfolio = await _PortfolioRepo.GetPortfolio(user.Id, id);
 
