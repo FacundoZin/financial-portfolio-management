@@ -14,6 +14,7 @@ namespace api.Application.Interfaces.Services
         Task<Result<Portfolio>> GetPortfolioByID(string username, int id);
         Task<Result<List<Portfolio>>> GetALL(string username);
         Task<Result<Portfolio>> AddStock(string username, string symbol, int IdPortfolio);
+        Task<Result<Portfolio>> DeleteStock(string username, string symbol, int IdPortfolio);
 
     }
 }

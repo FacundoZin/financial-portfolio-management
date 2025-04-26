@@ -42,7 +42,24 @@ namespace api.Infrastructure.Persistence.Repository
             if (Portfolio == null) return false;
 
             Portfolio.Holdings.Add(holding);
-            await _Context.SaveChangesAsync();
+            var rowsAffected = await _Context.SaveChangesAsync();
+
+            if (rowsAffected == 0) return false;
+
+            return true;
+        }
+
+        public async Task<bool> DeleteStock(Holding holding)
+        {
+            var portfolio = await _Context.portfolios.Include(p => p.Holdings)
+            .FirstOrDefaultAsync(p => p.AppUserID == holding.AppUserID && p.Id == holding.PortfolioID);
+
+            if (portfolio == null) return false;
+
+            portfolio.Holdings.Remove(holding);
+            var rowsAffected = await _Context.SaveChangesAsync();
+
+            if (rowsAffected == 0) return false;
 
             return true;
         }

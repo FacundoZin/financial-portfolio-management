@@ -71,6 +71,19 @@ namespace api.WebApi.Controllers
             return Ok();
         }
 
+        [HttpDelete("{portfolioId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteStockFromPortfolio(string symbol, [FromRoute] int portfolioId)
+        {
+            var username = User.getUserName();
+
+            var result = await _PortfolioService.DeleteStock(username, symbol, portfolioId);
+
+            if (!result.Exit) return StatusCode(result.Errorcode, result.Errormessage);
+
+            return NoContent();
+        }
+
 
 
     }

@@ -90,7 +90,7 @@ namespace api.Infrastructure.Persistence.Repository
 
             var affectedRows = await _DBcontext.SaveChangesAsync();
 
-            if (affectedRows > 0) return false;
+            if (affectedRows == 0) return false;
 
             return true;
         }

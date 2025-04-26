@@ -86,6 +86,26 @@ namespace api.Application.UseCases
             return Result<PortfolioAddedToUser>.Exito(createdPortfolio);
         }
 
+        public async Task<Result<Portfolio>> DeleteStock(string username, string symbol, int IdPortfolio)
+        {
+            var usertask = _AccountService.FindByname(username);
+            var stocktask = _StockRepo.GetbySymbolAsync(symbol);
+
+            await Task.WhenAll(usertask, stocktask);
+
+            var user = await usertask;
+            var stock = await stocktask;
+
+            if (user == null) return Result<Portfolio>.Error("user not found", 404);
+            if (stock == null) return Result<Portfolio>.Error("stock not found", 404);
+
+            var result = await _PortfolioRepo.DeleteStock(new Holding { StockID = stock.ID, AppUserID = user.Id, PortfolioID = IdPortfolio });
+
+            if (result == false) return Result<Portfolio>.Error("something went wrognt", 500);
+
+            Result<Portfolio>.Exito(null);
+        }
+
         public async Task<Result<List<Portfolio>>> GetALL(string username)
         {
             var User = await _AccountService.FindByname(username);
@@ -140,7 +160,6 @@ namespace api.Application.UseCases
 
                 await _HoldingRepository.addrelationship_withportfolio(updated_holding);
                 await _PortfolioRepo.AddStock(updated_holding);
-
             }
         }
     }
