@@ -62,11 +62,13 @@ namespace api.WebApi.Controllers
         [Authorize]
         public async Task<IActionResult> AddStockToPortfolio(string symbol, [FromRoute] int portfolioId)
         {
-            var user = User.getUserName();
+            var username = User.getUserName();
 
+            var result = await _PortfolioService.AddStock(username, symbol, portfolioId);
 
+            if (!result.Exit) return StatusCode(result.Errorcode, result.Errormessage);
 
-
+            return Ok();
         }
 
 
