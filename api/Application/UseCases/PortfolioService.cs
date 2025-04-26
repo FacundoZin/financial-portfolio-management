@@ -35,54 +35,33 @@ namespace api.Application.UseCases
 
         public async Task<Result<Portfolio>> AddStock(string username, string symbol, int IdPortfolio)
         {
-            var usertask = _AccountService.FindByname(username);
-            var stocktask = _StockRepo.GetbySymbolAsync(symbol);
-
-            await Task.WhenAll(usertask, stocktask);
-
-            var user = await usertask;
-            var stock = await stocktask;
-
-            if (stock == null)
+            try
             {
-                var search = await _FMPservice.FindBySymbolAsync(symbol);
-                if (search.Exit == false) return Result<Portfolio>.Error("stock not found", 404);
+                var usertask = _AccountService.FindByname(username);
+                var stocktask = _StockRepo.GetbySymbolAsync(symbol);
 
-                stock = await _StockRepo.Createasync(search.Data);
-            }
+                await Task.WhenAll(usertask, stocktask);
 
-            if (user == null) return Result<Portfolio>.Error("user not found", 404);
+                var user = await usertask;
+                var stock = await stocktask;
 
-
-            if (!user.Holdings.Any(H => H.StockID == stock.ID))
-            {
-                Holding holding = new Holding
+                if (stock == null)
                 {
-                    StockID = stock.ID,
-                    AppUserID = user.Id,
-                    PortfolioID = IdPortfolio
-                };
+                    var search = await _FMPservice.FindBySymbolAsync(symbol);
+                    if (search.Exit == false) return Result<Portfolio>.Error("stock not found", 404);
 
-                user.Holdings.Add(holding);
+                    stock = await _StockRepo.Createasync(search.Data);
+                }
 
-                await _HoldingRepository.AddStockToHolding(user, stock);
-                await _PortfolioRepo.AddStock(holding);
+                if (user == null) return Result<Portfolio>.Error("user not found", 404);
+
+                await AddOrUpdateHolding(user, stock, IdPortfolio);
 
                 return Result<Portfolio>.Exito(null);
             }
-            else
+            catch (Exception ex)
             {
-                Holding updated_holding = new Holding
-                {
-                    StockID = stock.ID,
-                    AppUserID = user.Id,
-                    PortfolioID = IdPortfolio
-                };
-
-                await _HoldingRepository.addrelationship_withportfolio(updated_holding);
-                await _PortfolioRepo.AddStock(updated_holding);
-
-                return Result<Portfolio>.Exito(null);
+                return Result<Portfolio>.Error("inteernal server error", 500);
             }
         }
 
@@ -129,6 +108,40 @@ namespace api.Application.UseCases
             if (portfolio == null) return Result<Portfolio>.Error("something went wrognt", 500);
 
             return Result<Portfolio>.Exito(portfolio);
+        }
+
+
+        private async Task AddOrUpdateHolding(AppUser user, Stock Stock, int PortfolioID)
+        {
+            if (!user.Holdings.Any(H => H.StockID == Stock.ID))
+            {
+                Holding holding = new Holding
+                {
+                    StockID = Stock.ID,
+                    AppUserID = user.Id,
+                    PortfolioID = PortfolioID
+                };
+
+                user.Holdings.Add(holding);
+
+                await _HoldingRepository.AddStockToHolding(user, Stock);
+                await _PortfolioRepo.AddStock(holding);
+
+
+            }
+            else
+            {
+                Holding updated_holding = new Holding
+                {
+                    StockID = Stock.ID,
+                    AppUserID = user.Id,
+                    PortfolioID = PortfolioID
+                };
+
+                await _HoldingRepository.addrelationship_withportfolio(updated_holding);
+                await _PortfolioRepo.AddStock(updated_holding);
+
+            }
         }
     }
 }
