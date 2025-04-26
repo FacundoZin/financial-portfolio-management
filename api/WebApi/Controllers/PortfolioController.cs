@@ -56,6 +56,16 @@ namespace api.WebApi.Controllers
             if (!result.Exit) return StatusCode(result.Errorcode, result.Errormessage);
 
             return Ok(result.Data);
+        }
+
+        [HttpPost("{portfolioId}")]
+        [Authorize]
+        public async Task<IActionResult> AddStockToPortfolio(string symbol, [FromRoute] int portfolioId)
+        {
+            var user = User.getUserName();
+
+
+
 
         }
 

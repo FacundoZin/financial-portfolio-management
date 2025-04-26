@@ -84,5 +84,15 @@ namespace api.Infrastructure.Persistence.Repository
             }
         }
 
+        public async Task<bool> addrelationship_withportfolio(Holding Updated_Holding)
+        {
+            _DBcontext.Holdings.Update(Updated_Holding);
+
+            var affectedRows = await _DBcontext.SaveChangesAsync();
+
+            if (affectedRows > 0) return false;
+
+            return true;
+        }
     }
 }

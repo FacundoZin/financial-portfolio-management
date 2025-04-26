@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Portfolio;
+using api.Application.Interfaces.External;
 using api.Application.Interfaces.Reposiories;
 using api.Application.Interfaces.Services;
 using api.Domain.Entities;
+using api.Infrastructure.Persistence.Repository;
 using Microsoft.Identity.Client;
 using Microsoft.IdentityModel.Tokens;
 
@@ -17,11 +19,71 @@ namespace api.Application.UseCases
     {
         private readonly IPortfolioRepository _PortfolioRepo;
         private readonly IaccountService _AccountService;
+        private readonly IStockRepository _StockRepo;
+        private readonly IFMPService _FMPservice;
+        private readonly IHoldingRepository _HoldingRepository;
 
-        public PortfolioService(IPortfolioRepository portfolioRepository, IaccountService accountservice)
+        public PortfolioService(IPortfolioRepository portfolioRepository, IaccountService accountservice,
+            IStockRepository stockRepository, IFMPService fMPService, HoldingRepository holdingRepository)
         {
             _PortfolioRepo = portfolioRepository;
             _AccountService = accountservice;
+            _StockRepo = stockRepository;
+            _FMPservice = fMPService;
+            _HoldingRepository = holdingRepository;
+        }
+
+        public async Task<Result<Portfolio>> AddStock(string username, string symbol, int IdPortfolio)
+        {
+            var usertask = _AccountService.FindByname(username);
+            var stocktask = _StockRepo.GetbySymbolAsync(symbol);
+
+            await Task.WhenAll(usertask, stocktask);
+
+            var user = await usertask;
+            var stock = await stocktask;
+
+            if (stock == null)
+            {
+                var search = await _FMPservice.FindBySymbolAsync(symbol);
+                if (search.Exit == false) return Result<Portfolio>.Error("stock not found", 404);
+
+                stock = await _StockRepo.Createasync(search.Data);
+            }
+
+            if (user == null) return Result<Portfolio>.Error("user not found", 404);
+
+
+            if (!user.Holdings.Any(H => H.StockID == stock.ID))
+            {
+                Holding holding = new Holding
+                {
+                    StockID = stock.ID,
+                    AppUserID = user.Id,
+                    PortfolioID = IdPortfolio
+                };
+
+                user.Holdings.Add(holding);
+
+                await _HoldingRepository.AddStockToHolding(user, stock);
+                await _PortfolioRepo.AddStock(holding);
+
+                return Result<Portfolio>.Exito(null);
+            }
+            else
+            {
+                Holding updated_holding = new Holding
+                {
+                    StockID = stock.ID,
+                    AppUserID = user.Id,
+                    PortfolioID = IdPortfolio
+                };
+
+                await _HoldingRepository.addrelationship_withportfolio(updated_holding);
+                await _PortfolioRepo.AddStock(updated_holding);
+
+                return Result<Portfolio>.Exito(null);
+            }
         }
 
         public async Task<Result<PortfolioAddedToUser>> CreatePortfolio(string username, string namePortfolio)

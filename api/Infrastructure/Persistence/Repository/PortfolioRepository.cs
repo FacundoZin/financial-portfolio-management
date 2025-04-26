@@ -32,7 +32,19 @@ namespace api.Infrastructure.Persistence.Repository
             if (result > 0) return portfolio;
 
             return null;
+        }
 
+        public async Task<bool> AddStock(Holding holding)
+        {
+            var Portfolio = await _Context.portfolios.Include(p => p.Holdings)
+            .FirstOrDefaultAsync(p => p.AppUserID == holding.AppUserID && p.Id == holding.PortfolioID);
+
+            if (Portfolio == null) return false;
+
+            Portfolio.Holdings.Add(holding);
+            await _Context.SaveChangesAsync();
+
+            return true;
         }
 
         public async Task<List<Portfolio>?> GetAllPortfolios(string UserID)
