@@ -103,7 +103,7 @@ namespace api.Application.UseCases
 
             if (result == false) return Result<Portfolio>.Error("something went wrognt", 500);
 
-            Result<Portfolio>.Exito(null);
+            return Result<Portfolio>.Exito(null);
         }
 
         public async Task<Result<List<Portfolio>>> GetALL(string username)
