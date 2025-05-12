@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using RabbitMQ.Client;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -89,6 +90,17 @@ builder.Services.AddAuthentication(Options =>
         )
     };
 });
+
+
+// Config RabbitMQ
+var factory = new ConnectionFactory
+{
+    HostName = builder.Configuration["RabbitMQ:Host"],
+    UserName = builder.Configuration["RabbitMQ:User"],
+    Password = builder.Configuration["RabbitMQ:Password"]
+};
+var connection = await factory.CreateConnectionAsync();
+builder.Services.AddSingleton<IConnection>(connection);
 
 var app = builder.Build();
 

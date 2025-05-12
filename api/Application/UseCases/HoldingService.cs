@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Stock;
 using api.Application.Interfaces.External;
+using api.Application.Interfaces.Messaging;
 using api.Application.Interfaces.Reposiories;
 using api.Application.Interfaces.Services;
 using api.Application.mappers;
@@ -18,14 +19,16 @@ namespace api.Application.UseCases
         private readonly IHoldingRepository _HoldingRepository;
         private readonly IStockRepository _StockRepo;
         private readonly IFMPService _FMPservice;
+        private readonly IStockFollowPublisher _Publisher;
 
         public HoldingService(IaccountService accountservice, IHoldingRepository holdingRepository,
-        IStockRepository stockrepo, IFMPService fMPService)
+        IStockRepository stockrepo, IFMPService fMPService, IStockFollowPublisher publisher)
         {
             _AccountService = accountservice;
             _HoldingRepository = holdingRepository;
             _StockRepo = stockrepo;
             _FMPservice = fMPService;
+            _Publisher = publisher;
         }
 
         public async Task<Result<AddedstockToHolding>> AddStock(string username, string symbol)
