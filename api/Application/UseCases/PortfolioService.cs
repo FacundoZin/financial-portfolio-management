@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Portfolio;
 using api.Application.Interfaces.External;
+using api.Application.Interfaces.Messaging;
 using api.Application.Interfaces.Reposiories;
 using api.Application.Interfaces.Services;
+using api.Application.Interfaces.TaskQueue;
 using api.Domain.Entities;
 using api.Infrastructure.Persistence.Repository;
 using Microsoft.Identity.Client;
@@ -22,15 +24,22 @@ namespace api.Application.UseCases
         private readonly IStockRepository _StockRepo;
         private readonly IFMPService _FMPservice;
         private readonly IHoldingRepository _HoldingRepository;
+        private readonly IBackgroundTaskQueue _TaskQueue;
+        private readonly IStockFollowPublisher _Publisher;
+        private readonly ILogger _Logger;
 
         public PortfolioService(IPortfolioRepository portfolioRepository, IaccountService accountservice,
-            IStockRepository stockRepository, IFMPService fMPService, HoldingRepository holdingRepository)
+            IStockRepository stockRepository, IFMPService fMPService, HoldingRepository holdingRepository,
+            IBackgroundTaskQueue taskQueue, IStockFollowPublisher publisher, ILogger logger)
         {
             _PortfolioRepo = portfolioRepository;
             _AccountService = accountservice;
             _StockRepo = stockRepository;
             _FMPservice = fMPService;
             _HoldingRepository = holdingRepository;
+            _TaskQueue = taskQueue;
+            _Publisher = publisher;
+            _Logger = logger;
         }
 
         public async Task<Result<Portfolio>> AddStock(string username, string symbol, int IdPortfolio)
@@ -50,6 +59,7 @@ namespace api.Application.UseCases
                     var search = await _FMPservice.FindBySymbolAsync(symbol);
                     if (search.Exit == false) return Result<Portfolio>.Error("stock not found", 404);
 
+                    EnqueuePublishStockFollowed(search.Data.Symbol);
                     stock = await _StockRepo.Createasync(search.Data);
                 }
 
@@ -161,6 +171,21 @@ namespace api.Application.UseCases
                 await _HoldingRepository.addrelationship_withportfolio(updated_holding);
                 await _PortfolioRepo.AddStock(updated_holding);
             }
+        }
+
+        private void EnqueuePublishStockFollowed(string symbol)
+        {
+            _TaskQueue.Enqueue(async token =>
+            {
+                try
+                {
+                    await _Publisher.PublishStockFollowedAsync(symbol);
+                }
+                catch (Exception ex)
+                {
+                    _Logger.LogError(ex, "Error occurred executing background task.");
+                }
+            });
         }
     }
 }

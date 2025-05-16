@@ -8,6 +8,7 @@ using api.Application.Interfaces.External;
 using api.Application.Interfaces.Messaging;
 using api.Application.Interfaces.Reposiories;
 using api.Application.Interfaces.Services;
+using api.Application.Interfaces.TaskQueue;
 using api.Application.mappers;
 using api.Domain.Entities;
 
@@ -20,15 +21,20 @@ namespace api.Application.UseCases
         private readonly IStockRepository _StockRepo;
         private readonly IFMPService _FMPservice;
         private readonly IStockFollowPublisher _Publisher;
+        private readonly IBackgroundTaskQueue _TaskQueue;
+        private readonly ILogger _Logger;
 
         public HoldingService(IaccountService accountservice, IHoldingRepository holdingRepository,
-        IStockRepository stockrepo, IFMPService fMPService, IStockFollowPublisher publisher)
+        IStockRepository stockrepo, IFMPService fMPService, IStockFollowPublisher publisher, IBackgroundTaskQueue TaskQueue,
+        ILogger logger)
         {
             _AccountService = accountservice;
             _HoldingRepository = holdingRepository;
             _StockRepo = stockrepo;
             _FMPservice = fMPService;
             _Publisher = publisher;
+            _TaskQueue = TaskQueue;
+            _Logger = logger;
         }
 
         public async Task<Result<AddedstockToHolding>> AddStock(string username, string symbol)
@@ -52,6 +58,8 @@ namespace api.Application.UseCases
                     if (search.Data == null) return Result<AddedstockToHolding>.Error("this stock not exist", 404);
 
                     stock = search.Data;
+
+                    EnqueuePublishStockFollowed(search.Data.Symbol);
                 }
 
                 bool result = await _HoldingRepository.AddStockToHolding(appUser, stock);
@@ -121,6 +129,19 @@ namespace api.Application.UseCases
             }
         }
 
-
+        private void EnqueuePublishStockFollowed(string symbol)
+        {
+            _TaskQueue.Enqueue(async token =>
+            {
+                try
+                {
+                    await _Publisher.PublishStockFollowedAsync(symbol);
+                }
+                catch (Exception ex)
+                {
+                    _Logger.LogError(ex, "Error occurred executing background task.");
+                }
+            });
+        }
     }
 }

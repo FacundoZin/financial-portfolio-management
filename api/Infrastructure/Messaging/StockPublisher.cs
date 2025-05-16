@@ -13,7 +13,7 @@ namespace api.Infrastructure.Messaging
 {
     public class StockPublisher : IStockFollowPublisher
     {
-        public IConnection _Connection;
+        private readonly IConnection _Connection;
 
         public async Task PublishStockFollowedAsync(string symbol)
         {
@@ -33,7 +33,6 @@ namespace api.Infrastructure.Messaging
             var chanel = await initChanel();
 
             await Publish(chanel, symbol, routingKey, exchange);
-
         }
 
         private async Task Publish(IChannel chanel, string symbol, string routingKey, string exchange)
@@ -62,5 +61,6 @@ namespace api.Infrastructure.Messaging
             var channel = await _Connection.CreateChannelAsync();
             return channel;
         }
+
     }
 }

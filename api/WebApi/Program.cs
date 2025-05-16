@@ -3,13 +3,16 @@ using api.Application.Interfaces.External;
 using api.Application.Interfaces.Identity;
 using api.Application.Interfaces.Reposiories;
 using api.Application.Interfaces.Services;
+using api.Application.Interfaces.TaskQueue;
 using api.Application.UseCases;
 using api.Domain.Entities;
 using api.Infrastructure.Auth;
+using api.Infrastructure.HostedServices;
 using api.Infrastructure.Identity;
 using api.Infrastructure.Persistence.Data;
 using api.Infrastructure.Persistence.Repository;
 using api.Infrastructure.Services;
+using api.Infrastructure.TaskQueue;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -49,6 +52,9 @@ builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddScoped<IaccountService, AccountService>();
+
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTakQueue>();
+builder.Services.AddHostedService<QueueHostedService>();
 
 builder.Services.AddScoped<IFMPService, FMPService>();
 builder.Services.AddHttpClient<IFMPService, FMPService>();
@@ -90,7 +96,6 @@ builder.Services.AddAuthentication(Options =>
         )
     };
 });
-
 
 // Config RabbitMQ
 var factory = new ConnectionFactory
