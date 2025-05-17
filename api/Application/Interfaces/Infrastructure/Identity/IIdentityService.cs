@@ -1,7 +1,7 @@
 ﻿using api.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace api.Application.Interfaces.Identity
+namespace api.Application.Interfaces.Infrastructure.Identity
 {
     public interface IIdentityService
     {

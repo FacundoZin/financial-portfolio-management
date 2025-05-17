@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using api.Application.Interfaces.Auth;
+using api.Application.Interfaces.Infrastructure.Auth;
 using api.Domain.Entities;
 using Microsoft.IdentityModel.Tokens;
 

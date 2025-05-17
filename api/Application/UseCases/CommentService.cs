@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using api.Application.Interfaces.External;
-using api.Application.Interfaces.Reposiories;
-using api.Application.Interfaces.Services;
 using api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using api.Application.DTOs.Comment;
 using api.Application.mappers;
 using api.Application.Common;
 using api.Application.Helpers;
+using api.Application.Interfaces.UseCases;
+using api.Application.Interfaces.Infrastructure.FMP_Client;
+using api.Application.Interfaces.Infrastructure.Reposiories;
 
 namespace api.Application.UseCases
 {

@@ -1,4 +1,4 @@
-﻿using api.Application.Interfaces.Identity;
+﻿using api.Application.Interfaces.Infrastructure.Identity;
 using api.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 

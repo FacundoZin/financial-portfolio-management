@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using api.Application.Interfaces.TaskQueue;
+using api.Application.Interfaces.Infrastructure.BackgrounServices;
 
-namespace api.Infrastructure.TaskQueue
+namespace api.Infrastructure.BackgroundServices
 {
-    public class BackgroundTakQueue : IBackgroundTaskQueue
+    public class TaskQueue : IBackgroundTaskQueue
     {
         private readonly Channel<Func<CancellationToken, Task>> _queue;
         private readonly int capacity = 100;
 
-        public BackgroundTakQueue()
+        public TaskQueue()
         {
             var options = new BoundedChannelOptions(capacity)
             {

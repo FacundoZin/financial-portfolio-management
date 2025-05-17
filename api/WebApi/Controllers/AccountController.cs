@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using api.Application.DTOs.Account;
-using api.Application.Interfaces.Services;
+using api.Application.Interfaces.UseCases;
 using api.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

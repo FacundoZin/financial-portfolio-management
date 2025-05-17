@@ -7,7 +7,7 @@ using api.Application.DTOs.Stock;
 using api.Application.Helpers;
 using api.Domain.Entities;
 
-namespace api.Application.Interfaces.Services
+namespace api.Application.Interfaces.UseCases
 {
     public interface IStockService
     {

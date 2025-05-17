@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.DTOs.Stock;
 using api.Application.Helpers;
-using api.Application.Interfaces.Services;
 using api.Application.mappers;
 using api.Infrastructure.Persistence.Data;
 using api.Application.Interfaces;
@@ -12,6 +11,7 @@ using api.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using api.Application.Interfaces.UseCases;
 
 namespace api.WebApi.Controllers
 {

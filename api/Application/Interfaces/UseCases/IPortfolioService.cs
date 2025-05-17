@@ -6,7 +6,7 @@ using api.Application.Common;
 using api.Application.DTOs.Portfolio;
 using api.Domain.Entities;
 
-namespace api.Application.Interfaces.Services
+namespace api.Application.Interfaces.UseCases
 {
     public interface IPortfolioService
     {

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using api.Application.Interfaces.Services;
 using api.Application.Interfaces;
 using api.Domain.Entities;
 using api.Infrastructure.Persistence.Repository;
@@ -10,6 +9,7 @@ using api.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using api.Application.Interfaces.UseCases;
 
 namespace api.WebApi.Controllers
 {

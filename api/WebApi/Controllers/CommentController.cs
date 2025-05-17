@@ -5,13 +5,13 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using api.Application.DTOs.Comment;
 using api.Application.Helpers;
-using api.Application.Interfaces.Services;
 using api.Application.DTOs;
 using api.Domain.Entities;
 using api.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata;
+using api.Application.Interfaces.UseCases;
 
 namespace api.WebApi.Controllers
 {

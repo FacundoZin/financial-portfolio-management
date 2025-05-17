@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using api.Application.Interfaces.Reposiories;
 using api.Application.Common;
 using api.Domain.Entities;
 using api.Application.DTOs.Stock;
@@ -10,6 +9,7 @@ using api.Infrastructure.Persistence.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using api.Application.Interfaces.Infrastructure.Reposiories;
 
 namespace api.Infrastructure.Persistence.Repository
 {

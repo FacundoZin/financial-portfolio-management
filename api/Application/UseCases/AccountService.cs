@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Account;
-using api.Application.Interfaces.Auth;
-using api.Application.Interfaces.Identity;
-using api.Application.Interfaces.Services;
+using api.Application.Interfaces.Infrastructure.Auth;
+using api.Application.Interfaces.Infrastructure.Identity;
+using api.Application.Interfaces.UseCases;
 using api.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 

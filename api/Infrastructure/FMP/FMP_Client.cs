@@ -5,19 +5,19 @@ using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Stock;
-using api.Application.Interfaces.External;
+using api.Application.Interfaces.Infrastructure.FMP_Client;
 using api.Application.mappers;
 using api.Domain.Entities;
 using Newtonsoft.Json;
 
 namespace api.Infrastructure.Services
 {
-    public class FMPService : IFMPService
+    public class FMP_Client : IFMPService
     {
         private HttpClient _HttpClient;
         private IConfiguration _Config;
 
-        public FMPService(HttpClient httpClient, IConfiguration config)
+        public FMP_Client(HttpClient httpClient, IConfiguration config)
         {
             _HttpClient = httpClient;
             _Config = config;

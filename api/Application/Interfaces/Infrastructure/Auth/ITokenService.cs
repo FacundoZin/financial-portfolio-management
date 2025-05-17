@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Domain.Entities;
 
-namespace api.Application.Interfaces.Auth
+namespace api.Application.Interfaces.Infrastructure.Auth
 {
     public interface ITokenService
     {

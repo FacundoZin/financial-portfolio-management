@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Stock;
-using api.Application.Interfaces.External;
-using api.Application.Interfaces.Messaging;
-using api.Application.Interfaces.Reposiories;
-using api.Application.Interfaces.Services;
-using api.Application.Interfaces.TaskQueue;
+using api.Application.Interfaces.Infrastructure.BackgrounServices;
+using api.Application.Interfaces.Infrastructure.FMP_Client;
+using api.Application.Interfaces.Infrastructure.Messaging;
+using api.Application.Interfaces.Infrastructure.Reposiories;
+using api.Application.Interfaces.UseCases;
 using api.Application.mappers;
 using api.Domain.Entities;
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using api.Application.Interfaces.Reposiories;
+using api.Application.Interfaces.Infrastructure.Reposiories;
 using api.Domain.Entities;
 using api.Infrastructure.Persistence.Data;
 using Microsoft.EntityFrameworkCore;

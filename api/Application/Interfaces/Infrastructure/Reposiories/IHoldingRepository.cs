@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using api.Application.Common;
 using api.Domain.Entities;
 
-namespace api.Application.Interfaces.Reposiories
+namespace api.Application.Interfaces.Infrastructure.Reposiories
 {
     public interface IHoldingRepository
     {

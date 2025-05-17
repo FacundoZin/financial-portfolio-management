@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using api.Domain.Entities;
 using api.Infrastructure.Persistence.Repository;
 
-namespace api.Application.Interfaces.Reposiories
+namespace api.Application.Interfaces.Infrastructure.Reposiories
 {
     public interface IPortfolioRepository
     {

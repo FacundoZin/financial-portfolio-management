@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using api.Application.Interfaces.Reposiories;
 using api.Domain.Entities;
 using api.Application.Helpers;
 using api.Infrastructure.Persistence.Data;
 using Microsoft.EntityFrameworkCore;
+using api.Application.Interfaces.Infrastructure.Reposiories;
 
 namespace api.Infrastructure.Persistence.Repository
 {

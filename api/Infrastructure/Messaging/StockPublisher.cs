@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using api.Application.Interfaces.Messaging;
+using api.Application.Interfaces.Infrastructure.Messaging;
 using api.Application.UseCases;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Newtonsoft.Json;
