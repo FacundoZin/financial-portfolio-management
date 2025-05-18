@@ -13,5 +13,6 @@ namespace api.Application.Interfaces.Infrastructure.Reposiories
         Task<bool> AddStockToHolding(AppUser User, Stock stock);
         Task<bool> DeleteStock(AppUser user, Stock stock);
         Task<bool> addrelationship_withportfolio(Holding Updated_Holding);
+        Task<bool> AnyUserHoldingStock(string Symbol);
     }
 }

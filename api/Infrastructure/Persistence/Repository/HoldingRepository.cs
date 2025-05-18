@@ -94,5 +94,10 @@ namespace api.Infrastructure.Persistence.Repository
 
             return true;
         }
+
+        public async Task<bool> AnyUserHoldingStock(string Symbol)
+        {
+            return await _DBcontext.Holdings.AnyAsync(H => H.Stock.Symbol == Symbol);
+        }
     }
 }

@@ -51,8 +51,8 @@ namespace api.Application.UseCases
 
                 await Task.WhenAll(usertask, stocktask);
 
-                var user = await usertask;
-                var stock = await stocktask;
+                var user = usertask.Result;
+                var stock = stocktask.Result;
 
                 if (stock == null)
                 {
@@ -103,8 +103,8 @@ namespace api.Application.UseCases
 
             await Task.WhenAll(usertask, stocktask);
 
-            var user = await usertask;
-            var stock = await stocktask;
+            var user = usertask.Result;
+            var stock = stocktask.Result;
 
             if (user == null) return Result<Portfolio>.Error("user not found", 404);
             if (stock == null) return Result<Portfolio>.Error("stock not found", 404);

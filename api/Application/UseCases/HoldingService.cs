@@ -41,37 +41,36 @@ namespace api.Application.UseCases
         {
             try
             {
-                var TaskappUser = _AccountService.FindByname(username);
-                var Taskstock = _StockRepo.GetbySymbolAsync(symbol);
+                var TaskappUser = GetUser(username);
+                var Taskstock = GetOrRetrieveStockAsync(symbol);
 
                 await Task.WhenAll(TaskappUser, Taskstock);
 
-                var appUser = await TaskappUser;
-                var stock = await Taskstock;
+                var appUser = TaskappUser.Result;
+                var stock = Taskstock.Result;
 
-                if (appUser == null) return Result<AddedstockToHolding>.Error("user not found", 404);
+                if (appUser == null || stock == null)
+                    return Result<AddedstockToHolding>.Error(appUser == null ? "user not found" : "stock not found", 404);
 
-                if (stock == null)
-                {
-                    var search = await _FMPservice.FindBySymbolAsync(symbol);
+                var UserHolding = await _HoldingRepository.GetHoldingByUser(appUser);
 
-                    if (search.Data == null) return Result<AddedstockToHolding>.Error("this stock not exist", 404);
-
-                    stock = search.Data;
-
-                    EnqueuePublishStockFollowed(search.Data.Symbol);
-                }
+                if (UserHolding != null && ContainsStock(UserHolding, symbol))
+                    return Result<AddedstockToHolding>.Error("stock already added to holding", 409);
 
                 bool result = await _HoldingRepository.AddStockToHolding(appUser, stock);
 
-                if (result == false) return Result<AddedstockToHolding>.Error("sorry, something went wrong", 500);
+                if (result == false)
+                {
+                    throw new Exception($"Unexpected error in AddStock for user {username} and symbol {symbol}");
+                }
 
                 var stockadded = stock.ToAddedStockHoldingfromStock();
 
                 return Result<AddedstockToHolding>.Exito(stockadded);
             }
-            catch
+            catch (Exception ex)
             {
+                _Logger.LogError(ex, $"Unexpected error in AddStock for user {username} and symbol {symbol}");
                 return Result<AddedstockToHolding>.Error("sorry, something went wrong", 500);
             }
         }
@@ -80,29 +79,36 @@ namespace api.Application.UseCases
         {
             try
             {
-                var TaskappUser = _AccountService.FindByname(username);
+                var TaskappUser = GetUser(username);
                 var Taskstock = _StockRepo.GetbySymbolAsync(symbol);
 
                 await Task.WhenAll(TaskappUser, Taskstock);
 
-                var appuser = await TaskappUser;
-                var stock = await Taskstock;
+                var appuser = TaskappUser.Result;
+                var stock = Taskstock.Result;
 
                 if (appuser == null) return Result<Stock?>.Error("user not exit", 404);
-                if (stock == null) return Result<Stock?>.Error("stock not exit", 404);
+                if (stock == null) return Result<Stock?>.Error("stock not found", 404);
 
-                var holding = await _HoldingRepository.GetHoldingByUser(appuser);
-                if (holding.Count(s => s.Symbol.ToLower() == symbol.ToLower()) > 0) return Result<Stock?>.Error("the stock was not added to the portfolio", 400);
+                var UserHolding = await _HoldingRepository.GetHoldingByUser(appuser);
+
+                if (UserHolding == null || !ContainsStock(UserHolding, symbol))
+                    return Result<Stock?>.Error(UserHolding == null ? "Nothing stock Added to Holding" : "The Stock Was not added", 404);
 
                 bool result = await _HoldingRepository.DeleteStock(appuser, stock);
-                if (result == false) return Result<Stock?>.Error("sorry, something went wrong", 500);
+                if (result == false) 
+                {
+                    throw new Exception($"Unexpected error in DeleteStock for user {username} and symbol {symbol}");
+                }
 
+                await HandleUnfollowedStocks(stock);
 
                 return Result<Stock?>.Exito(null);
 
             }
             catch (Exception ex)
             {
+                _Logger.LogError(ex, $"Unexpected error in DeleteStock for user {username} and symbol {symbol}");
                 return Result<Stock?>.Error("sorry, something went wrong", 500);
             }
         }
@@ -111,7 +117,7 @@ namespace api.Application.UseCases
         {
             try
             {
-                var appUser = await _AccountService.FindByname(username);
+                var appUser = await GetUser(username);
 
                 if (appUser == null) return Result<List<StockDto>?>.Error("User not found", 404);
 
@@ -125,6 +131,7 @@ namespace api.Application.UseCases
             }
             catch (Exception ex)
             {
+                _Logger.LogError(ex, $"Unexpected error in GetAllStocks for user {username}");
                 return Result<List<StockDto>?>.Error("we are sorry, something went wrong", 500);
             }
         }
@@ -139,9 +146,64 @@ namespace api.Application.UseCases
                 }
                 catch (Exception ex)
                 {
-                    _Logger.LogError(ex, "Error occurred executing background task.");
+                    _Logger.LogError(ex, "An error occurred while running the background task to publish the followed stock.");
                 }
             });
+        }
+
+        private void EnqueuePublishStockUnfollwed (string symbol)
+        {
+            _TaskQueue.Enqueue(async token =>
+            {
+                try
+                {
+                    await _Publisher.PublishStockUnfollowedAsync(symbol);
+
+                }catch (Exception ex)
+                {
+                    _Logger.LogError(ex, "An error occurred while running the background task to publish the unfollowed stock.");
+                }
+            });
+        }
+
+        private async Task<Stock?> GetOrRetrieveStockAsync (string symbol)
+        {
+            var stock = await _StockRepo.GetbySymbolAsync(symbol);
+
+            if (stock == null)
+            {
+                var result = await _FMPservice.FindBySymbolAsync(symbol);
+                if (result.Data == null) return null;
+
+                EnqueuePublishStockFollowed (result.Data.Symbol);
+                stock = result.Data;
+                return stock;
+            }
+
+            return stock;
+        }
+
+        private async Task<AppUser?> GetUser(string Username)
+        {
+            var user = await _AccountService.FindByname(Username);
+
+            if (user == null) return null;
+            return user;
+        }
+
+        private bool ContainsStock(List<Stock> holdings, string symbol) =>
+            holdings.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+
+        private async Task HandleUnfollowedStocks(Stock stock)
+        {
+            bool isFollowed = await _HoldingRepository.AnyUserHoldingStock(stock.Symbol);
+
+            if (!isFollowed)
+            {
+                await _StockRepo.Deleteasync(stock.ID);
+                EnqueuePublishStockUnfollwed(stock.Symbol);
+            }
+
         }
     }
 }
