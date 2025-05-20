@@ -36,13 +36,13 @@ namespace api.Infrastructure.Persistence.Repository
 
         public async Task<bool> AddStockToPortfolio(Portfolio portfolio)
         {
-
             await _Context.portfolios.AddAsync(portfolio);
 
             if (await _Context.SaveChangesAsync() == 0) return false;
 
             return true;
         }
+
 
         public async Task<bool> DeleteStock(Holding holding)
         {

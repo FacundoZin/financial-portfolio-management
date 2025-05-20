@@ -58,14 +58,14 @@ namespace api.Application.UseCases
                     return Result<Portfolio>.Error(stock == null ? "Stock not Found" : "User not Found", 404);
 
                 var portfolio = await _PortfolioRepo.GetPortfolio(user.Id, IdPortfolio);
-                
-                
-                await UpdateHolding(user, stock, IdPortfolio);
+                 
+                await UpdateHoldingAndPortfolio(user, stock, IdPortfolio, portfolio!);
 
                 return Result<Portfolio>.Exito(null);
             }
             catch (Exception ex)
             {
+                _Logger.LogError(ex, "error ocurred while added stock to portfolio");
                 return Result<Portfolio>.Error("inteernal server error", 500);
             }
         }
@@ -93,22 +93,29 @@ namespace api.Application.UseCases
 
         public async Task<Result<Portfolio>> DeleteStock(string username, string symbol, int IdPortfolio)
         {
-            var usertask = _AccountService.FindByname(username);
-            var stocktask = _StockRepo.GetbySymbolAsync(symbol);
+            try
+            {
+                var usertask = _AccountService.FindByname(username);
+                var stocktask = _StockRepo.GetbySymbolAsync(symbol);
 
-            await Task.WhenAll(usertask, stocktask);
+                await Task.WhenAll(usertask, stocktask);
 
-            var user = usertask.Result;
-            var stock = stocktask.Result;
+                var user = usertask.Result;
+                var stock = stocktask.Result;
 
-            if (user == null) return Result<Portfolio>.Error("user not found", 404);
-            if (stock == null) return Result<Portfolio>.Error("stock not found", 404);
+                if (user == null || stock == null)
+                    return Result<Portfolio>.Error(user == null ? "user not found" : "stock not found", 404);
 
-            var result = await _PortfolioRepo.DeleteStock(new Holding { StockID = stock.ID, AppUserID = user.Id, PortfolioID = IdPortfolio });
+                await HandleStockUnfollowed(stock);
 
-            if (result == false) return Result<Portfolio>.Error("something went wrognt", 500);
-
-            return Result<Portfolio>.Exito(null);
+                return Result<Portfolio>.Exito(null);
+            }
+            catch (Exception ex)
+            {
+                _Logger.LogError(ex, "Error when deleted Stock from portfolio");
+                return Result<Portfolio>.Error("Sorry Something went wrognt", 500);
+            }
+            
         }
 
         public async Task<Result<List<Portfolio>>> GetALL(string username)
@@ -136,35 +143,51 @@ namespace api.Application.UseCases
         }
 
 
-        private async Task UpdateHolding(AppUser user, Stock Stock, int PortfolioID)
+        private async Task UpdateHoldingAndPortfolio(AppUser user, Stock Stock, int PortfolioID, Portfolio portfolio)
         {
-            if (!user.Holdings.Any(H => H.StockID == Stock.ID))
+            try
             {
-                Holding holding = new Holding
+                if (!user.Holdings.Any(H => H.StockID == Stock.ID))
                 {
-                    StockID = Stock.ID,
-                    AppUserID = user.Id,
-                    PortfolioID = PortfolioID
-                };
+                    Holding holding = new Holding
+                    {
+                        StockID = Stock.ID,
+                        AppUserID = user.Id,
+                        PortfolioID = PortfolioID
+                    };
 
-                user.Holdings.Add(holding);
+                    user.Holdings.Add(holding);
+                    portfolio.Holdings.Add(holding);
 
-                await _HoldingRepository.AddStockToHolding(user, Stock);
-                await _PortfolioRepo.AddStock(holding);
-
-
-            }
-            else
-            {
-                Holding updated_holding = new Holding
+                    if(!await _HoldingRepository.AddStockToHolding(user, Stock)|
+                        !await _PortfolioRepo.AddStockToPortfolio(portfolio))
+                    {
+                        throw new Exception();
+                    }
+                    
+                }
+                else
                 {
-                    StockID = Stock.ID,
-                    AppUserID = user.Id,
-                    PortfolioID = PortfolioID
-                };
+                    Holding updated_holding = new Holding
+                    {
+                        StockID = Stock.ID,
+                        AppUserID = user.Id,
+                        PortfolioID = PortfolioID
+                    };
 
-                await _HoldingRepository.addrelationship_withportfolio(updated_holding);
+                    portfolio.Holdings.Add(updated_holding);
+
+                    if (!await _HoldingRepository.addrelationship_withportfolio(updated_holding) |
+                        !await _PortfolioRepo.AddStockToPortfolio(portfolio))
+                    {
+                        throw new Exception();
+                    }
+
+                }
             }
+            catch (Exception ex){
+                _Logger.LogError(ex, "error while updated the portfolio and holding");
+            }   
         }
 
         private async Task<Stock?> GetStockAsync(String Symbol)

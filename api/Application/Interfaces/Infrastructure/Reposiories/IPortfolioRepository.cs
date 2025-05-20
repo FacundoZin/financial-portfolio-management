@@ -12,7 +12,7 @@ namespace api.Application.Interfaces.Infrastructure.Reposiories
         Task<Portfolio?> AddPortfolioToUser(string UserID, string namePortfolio);
         Task<Portfolio?> GetPortfolio(string UserID, int IdPortfolio);
         Task<List<Portfolio>?> GetAllPortfolios(string UserID);
-        Task<bool> AddStock(Holding holding);
+        Task<bool> AddStockToPortfolio(Portfolio portfolio);
         Task<bool> DeleteStock(Holding holding);
 
     }
