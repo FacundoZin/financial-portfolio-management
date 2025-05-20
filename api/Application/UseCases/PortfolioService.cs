@@ -47,25 +47,20 @@ namespace api.Application.UseCases
             try
             {
                 var usertask = _AccountService.FindByname(username);
-                var stocktask = _StockRepo.GetbySymbolAsync(symbol);
+                var stocktask = GetStockAsync(symbol);
 
                 await Task.WhenAll(usertask, stocktask);
 
                 var user = usertask.Result;
                 var stock = stocktask.Result;
 
-                if (stock == null)
-                {
-                    var search = await _FMPservice.FindBySymbolAsync(symbol);
-                    if (search.Exit == false) return Result<Portfolio>.Error("stock not found", 404);
+                if (stock == null || user == null) 
+                    return Result<Portfolio>.Error(stock == null ? "Stock not Found" : "User not Found", 404);
 
-                    EnqueuePublishStockFollowed(search.Data.Symbol);
-                    stock = await _StockRepo.Createasync(search.Data);
-                }
-
-                if (user == null) return Result<Portfolio>.Error("user not found", 404);
-
-                await AddOrUpdateHolding(user, stock, IdPortfolio);
+                var portfolio = await _PortfolioRepo.GetPortfolio(user.Id, IdPortfolio);
+                
+                
+                await UpdateHolding(user, stock, IdPortfolio);
 
                 return Result<Portfolio>.Exito(null);
             }
@@ -141,7 +136,7 @@ namespace api.Application.UseCases
         }
 
 
-        private async Task AddOrUpdateHolding(AppUser user, Stock Stock, int PortfolioID)
+        private async Task UpdateHolding(AppUser user, Stock Stock, int PortfolioID)
         {
             if (!user.Holdings.Any(H => H.StockID == Stock.ID))
             {
@@ -169,7 +164,37 @@ namespace api.Application.UseCases
                 };
 
                 await _HoldingRepository.addrelationship_withportfolio(updated_holding);
-                await _PortfolioRepo.AddStock(updated_holding);
+            }
+        }
+
+        private async Task<Stock?> GetStockAsync(String Symbol)
+        {
+            var Stock = await _StockRepo.GetbySymbolAsync(Symbol);
+
+            if(Stock == null)
+            {
+                var SearchStock = await _FMPservice.FindBySymbolAsync(Symbol);
+
+                if (SearchStock.Data == null) return null;
+
+                EnqueuePublishStockFollowed(SearchStock.Data.Symbol);
+                Stock = SearchStock.Data;
+                await _StockRepo.Createasync(Stock);
+
+                return Stock;
+            }
+
+            return Stock;
+        }
+
+        private async Task HandleStockUnfollowed (Stock stock)
+        {
+            bool IsFollowed = await _HoldingRepository.AnyUserHoldingStock(stock.Symbol);
+
+            if (!IsFollowed)
+            {
+                await _StockRepo.Deleteasync(stock.ID);
+                EnqueuePublishStockUnfollowed(stock.Symbol);
             }
         }
 
@@ -187,5 +212,25 @@ namespace api.Application.UseCases
                 }
             });
         }
+
+        private void EnqueuePublishStockUnfollowed(string symbol)
+        {
+            _TaskQueue.Enqueue(async token =>
+            {   
+                try
+                {
+                    await _Publisher.PublishStockUnfollowedAsync(symbol);
+                }
+                catch (Exception ex)
+                {
+                    _Logger.LogError(ex, "Error occurred executing background task.");
+                }
+            });
+        }
+
+        private bool ContainsStock(List<Stock> Portfolio, string symbol) =>
+            Portfolio.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
+
+       
     }
 }

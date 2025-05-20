@@ -34,17 +34,12 @@ namespace api.Infrastructure.Persistence.Repository
             return null;
         }
 
-        public async Task<bool> AddStock(Holding holding)
+        public async Task<bool> AddStockToPortfolio(Portfolio portfolio)
         {
-            var Portfolio = await _Context.portfolios.Include(p => p.Holdings)
-            .FirstOrDefaultAsync(p => p.AppUserID == holding.AppUserID && p.Id == holding.PortfolioID);
 
-            if (Portfolio == null) return false;
+            await _Context.portfolios.AddAsync(portfolio);
 
-            Portfolio.Holdings.Add(holding);
-            var rowsAffected = await _Context.SaveChangesAsync();
-
-            if (rowsAffected == 0) return false;
+            if (await _Context.SaveChangesAsync() == 0) return false;
 
             return true;
         }
