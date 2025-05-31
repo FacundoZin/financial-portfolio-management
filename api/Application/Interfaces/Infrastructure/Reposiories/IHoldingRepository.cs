@@ -10,8 +10,8 @@ namespace api.Application.Interfaces.Infrastructure.Reposiories
     public interface IHoldingRepository
     {
         Task<List<Stock>?> GetHoldingByUser(AppUser User);
-        Task<bool> AddStockToHolding(AppUser User, Stock stock);
-        Task<bool> DeleteStock(AppUser user, Stock stock);
+        Task AddStockToHolding(string UserID, int stockID);
+        Task DeleteHolding(string UserID, int stockID);
         Task<bool> addrelationship_withportfolio(Holding Updated_Holding);
         Task<bool> AnyUserHoldingStock(string Symbol);
     }

@@ -1,5 +1,4 @@
 using api.Application.Interfaces.Infrastructure.Auth;
-using api.Application.Interfaces.Infrastructure.BackgrounServices;
 using api.Application.Interfaces.Infrastructure.FMP_Client;
 using api.Application.Interfaces.Infrastructure.Identity;
 using api.Application.Interfaces.Infrastructure.Reposiories;
@@ -7,8 +6,6 @@ using api.Application.Interfaces.UseCases;
 using api.Application.UseCases;
 using api.Domain.Entities;
 using api.Infrastructure.Auth;
-using api.Infrastructure.BackgroundServices;
-using api.Infrastructure.HostedServices;
 using api.Infrastructure.Identity;
 using api.Infrastructure.Persistence.Data;
 using api.Infrastructure.Persistence.Repository;
@@ -52,9 +49,6 @@ builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddScoped<IaccountService, AccountService>();
-
-builder.Services.AddSingleton<IBackgroundTaskQueue, TaskQueue>();
-builder.Services.AddHostedService<QueueHostedService>();
 
 builder.Services.AddScoped<IFMPService, FMP_Client>();
 builder.Services.AddHttpClient<IFMPService, FMP_Client>();

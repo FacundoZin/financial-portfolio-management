@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Portfolio;
-using api.Application.Interfaces.Infrastructure.BackgrounServices;
 using api.Application.Interfaces.Infrastructure.FMP_Client;
 using api.Application.Interfaces.Infrastructure.Messaging;
 using api.Application.Interfaces.Infrastructure.Reposiories;
@@ -24,20 +23,18 @@ namespace api.Application.UseCases
         private readonly IStockRepository _StockRepo;
         private readonly IFMPService _FMPservice;
         private readonly IHoldingRepository _HoldingRepository;
-        private readonly IBackgroundTaskQueue _TaskQueue;
         private readonly IStockFollowPublisher _Publisher;
         private readonly ILogger _Logger;
 
         public PortfolioService(IPortfolioRepository portfolioRepository, IaccountService accountservice,
-            IStockRepository stockRepository, IFMPService fMPService, HoldingRepository holdingRepository,
-            IBackgroundTaskQueue taskQueue, IStockFollowPublisher publisher, ILogger logger)
+            IStockRepository stockRepository, IFMPService fMPService, HoldingRepository holdingRepository, 
+            IStockFollowPublisher publisher, ILogger logger)
         {
             _PortfolioRepo = portfolioRepository;
             _AccountService = accountservice;
             _StockRepo = stockRepository;
             _FMPservice = fMPService;
             _HoldingRepository = holdingRepository;
-            _TaskQueue = taskQueue;
             _Publisher = publisher;
             _Logger = logger;
         }

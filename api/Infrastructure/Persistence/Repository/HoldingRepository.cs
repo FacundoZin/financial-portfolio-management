@@ -22,26 +22,18 @@ namespace api.Infrastructure.Persistence.Repository
             _DBcontext = dBcontext;
         }
 
-        public async Task<bool> AddStockToHolding(AppUser User, Stock stock)
+        public async Task AddStockToHolding(string UserID, int stockID)
         {
-            try
+            Holding added_item = new Holding
             {
-                Holding added_item = new Holding
-                {
-                    StockID = stock.ID,
-                    AppUserID = User.Id
-                };
+                StockID = stockID,
+                AppUserID = UserID
+            };
+            
+            await _DBcontext.Holdings.AddAsync(added_item);
+            int rowsaffected = await _DBcontext.SaveChangesAsync();
 
-                await _DBcontext.Holdings.AddAsync(added_item);
-                await _DBcontext.SaveChangesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-            ;
+            if (rowsaffected == 0) throw new Exception("Error adding stock to holding");
         }
 
         public async Task<List<Stock>?> GetHoldingByUser(AppUser User)
@@ -63,25 +55,18 @@ namespace api.Infrastructure.Persistence.Repository
             return Holding!;
         }
 
-        public async Task<bool> DeleteStock(AppUser user, Stock stock)
+        public async Task DeleteHolding(string UserID, int stockID)
         {
             Holding delete_item = new Holding
             {
-                StockID = stock.ID,
-                AppUserID = user.Id
+                StockID = stockID,
+                AppUserID = UserID,
             };
 
             _DBcontext.Holdings.Remove(delete_item);
             int rowsAffected = await _DBcontext.SaveChangesAsync();
 
-            if (rowsAffected == 0)
-            {
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            if (rowsAffected == 0) throw new Exception("Error deletting stock from holding");
         }
 
         public async Task<bool> addrelationship_withportfolio(Holding Updated_Holding)

@@ -4,13 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Stock;
-using api.Application.Interfaces.Infrastructure.BackgrounServices;
+using api.Application.Interfaces.Infrastructure.Caching;
 using api.Application.Interfaces.Infrastructure.FMP_Client;
 using api.Application.Interfaces.Infrastructure.Messaging;
 using api.Application.Interfaces.Infrastructure.Reposiories;
 using api.Application.Interfaces.UseCases;
 using api.Application.mappers;
 using api.Domain.Entities;
+using StackExchange.Redis;
 
 namespace api.Application.UseCases
 {
@@ -21,19 +22,18 @@ namespace api.Application.UseCases
         private readonly IStockRepository _StockRepo;
         private readonly IFMPService _FMPservice;
         private readonly IStockFollowPublisher _Publisher;
-        private readonly IBackgroundTaskQueue _TaskQueue;
         private readonly ILogger _Logger;
+        private readonly IRedisStockTracker _RedisStocksCaching;
 
         public HoldingService(IaccountService accountservice, IHoldingRepository holdingRepository,
-        IStockRepository stockrepo, IFMPService fMPService, IStockFollowPublisher publisher, IBackgroundTaskQueue TaskQueue,
-        ILogger logger)
+        IStockRepository stockrepo, IFMPService fMPService, IStockFollowPublisher publisher,ILogger logger, IRedisStockTracker redisStockCaching)
         {
             _AccountService = accountservice;
             _HoldingRepository = holdingRepository;
             _StockRepo = stockrepo;
             _FMPservice = fMPService;
             _Publisher = publisher;
-            _TaskQueue = TaskQueue;
+            _RedisStocksCaching = redisStockCaching;
             _Logger = logger;
         }
 
@@ -41,31 +41,49 @@ namespace api.Application.UseCases
         {
             try
             {
-                var TaskappUser = GetUser(username);
-                var Taskstock = GetOrRetrieveStockAsync(symbol);
+                Stock stock = new Stock();
+                var TaskappUser = _AccountService.FindByname(username);
+                var TaskStockExists = _RedisStocksCaching.StockExist(symbol);
 
-                await Task.WhenAll(TaskappUser, Taskstock);
+                await Task.WhenAll(TaskappUser, TaskStockExists);
 
                 var appUser = TaskappUser.Result;
-                var stock = Taskstock.Result;
-
-                if (appUser == null || stock == null)
-                    return Result<AddedstockToHolding>.Error(appUser == null ? "user not found" : "stock not found", 404);
+                bool StockExists = TaskStockExists.Result;
+                
+                if (appUser == null)
+                    return Result<AddedstockToHolding>.Error("user not found", 404);
 
                 var UserHolding = await _HoldingRepository.GetHoldingByUser(appUser);
 
-                if (UserHolding != null && ContainsStock(UserHolding, symbol))
-                    return Result<AddedstockToHolding>.Error("stock already added to holding", 409);
-
-                bool result = await _HoldingRepository.AddStockToHolding(appUser, stock);
-
-                if (result == false)
+                if (StockExists)
                 {
-                    throw new Exception($"Unexpected error in AddStock for user {username} and symbol {symbol}");
+                    if (UserHolding != null && ContainsStock(UserHolding, symbol))
+                        return Result<AddedstockToHolding>.Error("stock already added to holding", 409);
+
+                    var taskcaching = _RedisStocksCaching.IncrementStockFollowersAsync(symbol);
+                    var taskAddStockToholding = _HoldingRepository.AddStockToHolding(appUser.Id, await _RedisStocksCaching.GetStockID(symbol));
+
+                    await Task.WhenAll(taskcaching, taskAddStockToholding);
+
+                    stock = new Stock { Symbol = symbol};
+                }
+
+                if (!StockExists)
+                {
+                    var search = await _FMPservice.FindBySymbolAsync(symbol);
+                    if (search.Data == null) return Result<AddedstockToHolding>.Error("Stock not found", 404);
+
+                    var CreatedStock = await _StockRepo.Createasync(search.Data);
+
+
+                    var cachingstock = _RedisStocksCaching.trackNewStock(CreatedStock.ID, symbol, search.Data.Industry, search.Data.Companyname);
+                    var addstock = _HoldingRepository.AddStockToHolding(appUser.Id, CreatedStock.ID);
+
+                    await Task.WhenAll(cachingstock, addstock);
+                    stock = new Stock { Symbol = symbol };
                 }
 
                 var stockadded = stock.ToAddedStockHoldingfromStock();
-
                 return Result<AddedstockToHolding>.Exito(stockadded);
             }
             catch (Exception ex)
@@ -79,32 +97,30 @@ namespace api.Application.UseCases
         {
             try
             {
-                var TaskappUser = GetUser(username);
-                var Taskstock = _StockRepo.GetbySymbolAsync(symbol);
+                var TaskappUser = _AccountService.FindByname(username);
+                var Taskstockexist = _RedisStocksCaching.StockExist(symbol);
 
-                await Task.WhenAll(TaskappUser, Taskstock);
+                await Task.WhenAll(TaskappUser, Taskstockexist);
 
                 var appuser = TaskappUser.Result;
-                var stock = Taskstock.Result;
+                var stockexist = Taskstockexist.Result;
 
                 if (appuser == null) return Result<Stock?>.Error("user not exit", 404);
-                if (stock == null) return Result<Stock?>.Error("stock not found", 404);
+                if (!stockexist) return Result<Stock?>.Error("stock not found", 404);
 
                 var UserHolding = await _HoldingRepository.GetHoldingByUser(appuser);
 
                 if (UserHolding == null || !ContainsStock(UserHolding, symbol))
                     return Result<Stock?>.Error(UserHolding == null ? "Nothing stock Added to Holding" : "The Stock Was not added", 404);
 
-                bool result = await _HoldingRepository.DeleteStock(appuser, stock);
-                if (result == false) 
-                {
-                    throw new Exception($"Unexpected error in DeleteStock for user {username} and symbol {symbol}");
-                }
+                var taskdecrementcount = _RedisStocksCaching.DecrementStockFollowersAsync(symbol);
+                var taskdeleteholding = _HoldingRepository.DeleteHolding(appuser.Id, await _RedisStocksCaching.GetStockID(symbol));
 
-                await HandleUnfollowedStocks(stock);
+                await Task.WhenAll(taskdecrementcount, taskdeleteholding);
 
+                int stockfollowers = taskdecrementcount.Result;
+                if (stockfollowers == 0) await _StockRepo.Deleteasync(await _RedisStocksCaching.GetStockID(symbol));
                 return Result<Stock?>.Exito(null);
-
             }
             catch (Exception ex)
             {
@@ -117,7 +133,7 @@ namespace api.Application.UseCases
         {
             try
             {
-                var appUser = await GetUser(username);
+                var appUser = await _AccountService.FindByname(username);
 
                 if (appUser == null) return Result<List<StockDto>?>.Error("User not found", 404);
 
@@ -136,74 +152,10 @@ namespace api.Application.UseCases
             }
         }
 
-        private void EnqueuePublishStockFollowed(string symbol)
-        {
-            _TaskQueue.Enqueue(async token =>
-            {
-                try
-                {
-                    await _Publisher.PublishStockFollowedAsync(symbol);
-                }
-                catch (Exception ex)
-                {
-                    _Logger.LogError(ex, "An error occurred while running the background task to publish the followed stock.");
-                }
-            });
-        }
 
-        private void EnqueuePublishStockUnfollwed (string symbol)
-        {
-            _TaskQueue.Enqueue(async token =>
-            {
-                try
-                {
-                    await _Publisher.PublishStockUnfollowedAsync(symbol);
-
-                }catch (Exception ex)
-                {
-                    _Logger.LogError(ex, "An error occurred while running the background task to publish the unfollowed stock.");
-                }
-            });
-        }
-
-        private async Task<Stock?> GetOrRetrieveStockAsync (string symbol)
-        {
-            var stock = await _StockRepo.GetbySymbolAsync(symbol);
-
-            if (stock == null)
-            {
-                var result = await _FMPservice.FindBySymbolAsync(symbol);
-                if (result.Data == null) return null;
-
-                EnqueuePublishStockFollowed (result.Data.Symbol);
-                stock = result.Data;
-                return stock;
-            }
-
-            return stock;
-        }
-
-        private async Task<AppUser?> GetUser(string Username)
-        {
-            var user = await _AccountService.FindByname(Username);
-
-            if (user == null) return null;
-            return user;
-        }
 
         private bool ContainsStock(List<Stock> holdings, string symbol) =>
             holdings.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
 
-        private async Task HandleUnfollowedStocks(Stock stock)
-        {
-            bool isFollowed = await _HoldingRepository.AnyUserHoldingStock(stock.Symbol);
-
-            if (!isFollowed)
-            {
-                await _StockRepo.Deleteasync(stock.ID);
-                EnqueuePublishStockUnfollwed(stock.Symbol);
-            }
-
-        }
     }
 }
