@@ -74,8 +74,6 @@ namespace api.Application.UseCases
                     if (search.Data == null) return Result<AddedstockToHolding>.Error("Stock not found", 404);
 
                     var CreatedStock = await _StockRepo.Createasync(search.Data);
-
-
                     var cachingstock = _RedisStocksCaching.trackNewStock(CreatedStock.ID, symbol, search.Data.Industry, search.Data.Companyname);
                     var addstock = _HoldingRepository.AddStockToHolding(appUser.Id, CreatedStock.ID);
 

@@ -25,6 +25,8 @@ namespace api.Domain.Entities
 
         public long MarketCap { get; set; }
 
+        public int followers { get; set; }
+
         public List<Comment> Comments { get; set; } = new List<Comment>();
         public List<Holding> Holdings { get; set; } = new List<Holding>();
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using api.Application.Common;
 using api.Application.DTOs.Portfolio;
+using api.Application.Interfaces.Infrastructure.Caching;
 using api.Application.Interfaces.Infrastructure.FMP_Client;
 using api.Application.Interfaces.Infrastructure.Messaging;
 using api.Application.Interfaces.Infrastructure.Reposiories;
@@ -25,10 +26,11 @@ namespace api.Application.UseCases
         private readonly IHoldingRepository _HoldingRepository;
         private readonly IStockFollowPublisher _Publisher;
         private readonly ILogger _Logger;
+        private readonly IRedisStockTracker _StockCaching;
 
         public PortfolioService(IPortfolioRepository portfolioRepository, IaccountService accountservice,
-            IStockRepository stockRepository, IFMPService fMPService, HoldingRepository holdingRepository, 
-            IStockFollowPublisher publisher, ILogger logger)
+            IStockRepository stockRepository, IFMPService fMPService, IHoldingRepository holdingRepository, 
+            IStockFollowPublisher publisher, ILogger logger, IRedisStockTracker stockcaching)
         {
             _PortfolioRepo = portfolioRepository;
             _AccountService = accountservice;
@@ -37,28 +39,53 @@ namespace api.Application.UseCases
             _HoldingRepository = holdingRepository;
             _Publisher = publisher;
             _Logger = logger;
+            _StockCaching = stockcaching;
         }
 
         public async Task<Result<Portfolio>> AddStock(string username, string symbol, int IdPortfolio)
         {
             try
             {
+                var stockexist = _StockCaching.StockExist(symbol);
                 var usertask = _AccountService.FindByname(username);
-                var stocktask = GetStockAsync(symbol);
 
-                await Task.WhenAll(usertask, stocktask);
+                await Task.WhenAll(stockexist, usertask);
 
-                var user = usertask.Result;
-                var stock = stocktask.Result;
+                bool StockExistResult = stockexist.Result;
+                var appuser = usertask.Result;
 
-                if (stock == null || user == null) 
-                    return Result<Portfolio>.Error(stock == null ? "Stock not Found" : "User not Found", 404);
+                if (appuser == null) return Result<Portfolio>.Error("user not found", 404);
 
-                var portfolio = await _PortfolioRepo.GetPortfolio(user.Id, IdPortfolio);
-                 
-                await UpdateHoldingAndPortfolio(user, stock, IdPortfolio, portfolio!);
+                if (!StockExistResult)
+                {
+                    await HandleAddingStockUnfollowed(appuser, symbol, IdPortfolio);
+                }
+
+                var stock = await _StockCaching.GetStockData(symbol);
+
+                var TaskGetportfolio = _PortfolioRepo.GetPortfolio(appuser.Id, IdPortfolio);
+                var TaskGetholding = _HoldingRepository.GetHoldingByUser(appuser);
+
+                await Task.WhenAll(TaskGetholding, TaskGetportfolio);
+
+                var portfolio = TaskGetportfolio.Result;
+                var holding = TaskGetholding.Result;
+
+                if (holding.Any(s => s.ID == stock.ID))
+                {
+                    if (portfolio.Holdings.Any(s => s.StockID == stock.ID)) return Result<Portfolio>.Error("the stock has already been added", 409);
+                    portfolio.Holdings.Add(new Holding { PortfolioID = IdPortfolio, AppUserID = appuser.Id, StockID = stock.ID });
+                    await _PortfolioRepo.AddStockToPortfolio(portfolio);
+                }
+
+                portfolio.Holdings.Add(new Holding { PortfolioID = IdPortfolio, AppUserID = appuser.Id, StockID = stock.ID });
+
+                var TaskAddStocktoPortfolio = _PortfolioRepo.AddStockToPortfolio(portfolio);
+                var TaskAddStocktoHolding = _HoldingRepository.AddStockToHolding(appuser.Id, stock.ID, IdPortfolio);
+                await Task.WhenAll(TaskAddStocktoPortfolio, TaskAddStocktoHolding);
 
                 return Result<Portfolio>.Exito(null);
+
             }
             catch (Exception ex)
             {
@@ -73,7 +100,7 @@ namespace api.Application.UseCases
 
             var user = await _AccountService.FindByname(username);
 
-            if (user == null) return Result<PortfolioAddedToUser>.Error("sorry we couldn't get the username ", 404);
+            if (user == null) return Result<PortfolioAddedToUser>.Error("user not found", 404);
 
             var created_portfolio = await _PortfolioRepo.AddPortfolioToUser(username, namePortfolio);
 
@@ -93,17 +120,51 @@ namespace api.Application.UseCases
             try
             {
                 var usertask = _AccountService.FindByname(username);
-                var stocktask = _StockRepo.GetbySymbolAsync(symbol);
+                var stocktask = _StockCaching.StockExist(symbol);
 
                 await Task.WhenAll(usertask, stocktask);
 
                 var user = usertask.Result;
-                var stock = stocktask.Result;
+                var stockexist = stocktask.Result;
 
-                if (user == null || stock == null)
+                if (user == null || stockexist == false)
                     return Result<Portfolio>.Error(user == null ? "user not found" : "stock not found", 404);
 
-                await HandleStockUnfollowed(stock);
+
+                var Taskportfolio = _PortfolioRepo.GetPortfolio(user.Id, IdPortfolio);
+                var Taskholding = _HoldingRepository.GetHoldingByUser(user);
+                var Taskstockdata = _StockCaching.GetStockData(symbol);
+
+
+                await Task.WhenAll(Taskportfolio, Taskholding, Taskstockdata);
+
+                var holding = Taskholding.Result;
+                var portfolio = Taskportfolio.Result;
+                var StockData = Taskstockdata.Result;
+
+                
+                if (!portfolio.Holdings.Any(s => s.StockID == StockData.ID))
+                {
+                    return Result<Portfolio>.Error("the stock has not been added to portfolio", 409);
+                }
+
+                portfolio.Holdings.Remove(new Holding { PortfolioID = IdPortfolio, AppUserID = user.Id, StockID = StockData.ID });
+
+                var TaskDeleteStocktoHolding= _HoldingRepository.DeleteHolding(user.Id, StockData.ID);
+                var TaskDeleteStocktoPortfolio = _PortfolioRepo.DeleteStock(new Holding { PortfolioID = IdPortfolio, AppUserID = user.Id, StockID = StockData.ID });
+
+                await Task.WhenAll(TaskDeleteStocktoHolding,TaskDeleteStocktoPortfolio);
+
+                if (StockData.followers == 1)
+                {
+                    var TaskDeleteStockCache = _StockCaching.DecrementStockFollowersAsync(symbol);
+                    var TaskDeleteStock = _StockRepo.Deleteasync(StockData.ID);
+
+                    await Task.WhenAll (TaskDeleteStock, TaskDeleteStockCache);
+                }
+
+                var DecrementStockCache = _StockCaching.DecrementStockFollowersAsync(symbol);
+
 
                 return Result<Portfolio>.Exito(null);
             }
@@ -140,117 +201,34 @@ namespace api.Application.UseCases
         }
 
 
-        private async Task UpdateHoldingAndPortfolio(AppUser user, Stock Stock, int PortfolioID, Portfolio portfolio)
+        private bool ContainsStock(List<Stock> Portfolio, string symbol) =>
+            Portfolio.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));  
+        
+        private async Task<bool> HandleAddingStockUnfollowed(AppUser user, string symbol, int idPortfolio)
         {
             try
             {
-                if (!user.Holdings.Any(H => H.StockID == Stock.ID))
-                {
-                    Holding holding = new Holding
-                    {
-                        StockID = Stock.ID,
-                        AppUserID = user.Id,
-                        PortfolioID = PortfolioID
-                    };
+                var StockSearch = await _FMPservice.FindBySymbolAsync(symbol);
 
-                    user.Holdings.Add(holding);
-                    portfolio.Holdings.Add(holding);
+                if (StockSearch == null) return false;
 
-                    if(!await _HoldingRepository.AddStockToHolding(user, Stock)|
-                        !await _PortfolioRepo.AddStockToPortfolio(portfolio))
-                    {
-                        throw new Exception();
-                    }
-                    
-                }
-                else
-                {
-                    Holding updated_holding = new Holding
-                    {
-                        StockID = Stock.ID,
-                        AppUserID = user.Id,
-                        PortfolioID = PortfolioID
-                    };
+                var stock = await _StockRepo.Createasync(StockSearch);
 
-                    portfolio.Holdings.Add(updated_holding);
+                var _portfolio = await _PortfolioRepo.GetPortfolio(user.Id, idPortfolio);
+                _portfolio.Holdings.Add(new Holding { AppUserID = user.Id, StockID = stock.ID, PortfolioID = idPortfolio });
 
-                    if (!await _HoldingRepository.addrelationship_withportfolio(updated_holding) |
-                        !await _PortfolioRepo.AddStockToPortfolio(portfolio))
-                    {
-                        throw new Exception();
-                    }
+                var TaskAddStockToPortfolio = _PortfolioRepo.AddStockToPortfolio(_portfolio);
+                var TaskAddStockToHolding = _HoldingRepository.AddStockToHolding(user.Id, stock.ID, idPortfolio);
+                var TaskCachingStock = _StockCaching.trackNewStock(stock.ID, symbol, stock.Industry, stock.Companyname);
 
-                }
+                await Task.WhenAll(TaskAddStockToPortfolio, TaskAddStockToHolding, TaskCachingStock);
+
+                return true;
             }
-            catch (Exception ex){
-                _Logger.LogError(ex, "error while updated the portfolio and holding");
-            }   
-        }
-
-        private async Task<Stock?> GetStockAsync(String Symbol)
-        {
-            var Stock = await _StockRepo.GetbySymbolAsync(Symbol);
-
-            if(Stock == null)
+            catch (Exception ex)
             {
-                var SearchStock = await _FMPservice.FindBySymbolAsync(Symbol);
-
-                if (SearchStock.Data == null) return null;
-
-                EnqueuePublishStockFollowed(SearchStock.Data.Symbol);
-                Stock = SearchStock.Data;
-                await _StockRepo.Createasync(Stock);
-
-                return Stock;
-            }
-
-            return Stock;
+                return false;
+            }     
         }
-
-        private async Task HandleStockUnfollowed (Stock stock)
-        {
-            bool IsFollowed = await _HoldingRepository.AnyUserHoldingStock(stock.Symbol);
-
-            if (!IsFollowed)
-            {
-                await _StockRepo.Deleteasync(stock.ID);
-                EnqueuePublishStockUnfollowed(stock.Symbol);
-            }
-        }
-
-        private void EnqueuePublishStockFollowed(string symbol)
-        {
-            _TaskQueue.Enqueue(async token =>
-            {
-                try
-                {
-                    await _Publisher.PublishStockFollowedAsync(symbol);
-                }
-                catch (Exception ex)
-                {
-                    _Logger.LogError(ex, "Error occurred executing background task.");
-                }
-            });
-        }
-
-        private void EnqueuePublishStockUnfollowed(string symbol)
-        {
-            _TaskQueue.Enqueue(async token =>
-            {   
-                try
-                {
-                    await _Publisher.PublishStockUnfollowedAsync(symbol);
-                }
-                catch (Exception ex)
-                {
-                    _Logger.LogError(ex, "Error occurred executing background task.");
-                }
-            });
-        }
-
-        private bool ContainsStock(List<Stock> Portfolio, string symbol) =>
-            Portfolio.Any(s => s.Symbol.Equals(symbol, StringComparison.OrdinalIgnoreCase));
-
-       
     }
 }

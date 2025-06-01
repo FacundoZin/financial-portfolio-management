@@ -24,7 +24,7 @@ namespace api.Infrastructure.Services
         }
 
 
-        public async Task<Result<Stock>> FindBySymbolAsync(string symbol)
+        public async Task<Stock?> FindBySymbolAsync(string symbol)
         {
             try
             {
@@ -36,19 +36,14 @@ namespace api.Infrastructure.Services
                     var tasks = JsonConvert.DeserializeObject<FMPstockDto[]>(content);
                     var Stock = tasks[0];
 
-                    if (Stock != null)
-                    {
-                        return Result<Stock>.Exito(Stock.TOstockFromFMP());
-                    }
 
-                    return Result<Stock>.Error("stock not found", (int)result.StatusCode);
+                    return Stock.TOstockFromFMP();
                 }
-                return Result<Stock>.Error("something went wrong", (int)result.StatusCode);
+                return null;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-                return Result<Stock>.Error("something went wrong", 500);
+            catch (Exception ex) { 
+            
+
             }
         }
     }

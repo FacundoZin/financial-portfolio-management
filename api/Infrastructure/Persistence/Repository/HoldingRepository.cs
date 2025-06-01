@@ -22,12 +22,13 @@ namespace api.Infrastructure.Persistence.Repository
             _DBcontext = dBcontext;
         }
 
-        public async Task AddStockToHolding(string UserID, int stockID)
+        public async Task AddStockToHolding(string UserID, int stockID, int? PortfolioID = null)
         {
             Holding added_item = new Holding
             {
                 StockID = stockID,
-                AppUserID = UserID
+                AppUserID = UserID,
+                PortfolioID = PortfolioID
             };
             
             await _DBcontext.Holdings.AddAsync(added_item);

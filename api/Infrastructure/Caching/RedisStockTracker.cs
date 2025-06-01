@@ -76,12 +76,14 @@ namespace api.Infrastructure.Caching
         {
             var hashKey = GetStockHashKey(symbol);
             RedisValue id = await _db.HashGetAsync(hashKey, "id");
+            RedisValue followers = await _db.HashGetAsync(hashKey, "followers");
             RedisValue industry = await _db.HashGetAsync(hashKey, "industy");
             RedisValue companyname = await _db.HashGetAsync(hashKey, "companyname");
 
             return new Stock
             {
                 ID = (int)id,
+                followers = (int)followers,
                 Symbol = symbol,
                 Industry = industry.ToString(),
                 Companyname = companyname.ToString(),

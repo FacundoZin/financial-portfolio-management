@@ -9,6 +9,6 @@ namespace api.Application.Interfaces.Infrastructure.FMP_Client
 {
     public interface IFMPService
     {
-        Task<Result<Stock>> FindBySymbolAsync(string symbol);
+        Task<Stock?> FindBySymbolAsync(string symbol);
     }
 }
