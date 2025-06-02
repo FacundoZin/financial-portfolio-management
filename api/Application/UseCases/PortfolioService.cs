@@ -58,7 +58,8 @@ namespace api.Application.UseCases
 
                 if (!StockExistResult)
                 {
-                    await HandleAddingStockUnfollowed(appuser, symbol, IdPortfolio);
+                    bool Result = await HandleAddingStockUnfollowed(appuser, symbol, IdPortfolio);
+                    if(!Result) return Result<Portfolio>.Error("stock no exist", 404);
                 }
 
                 var stock = await _StockCaching.GetStockData(symbol);
